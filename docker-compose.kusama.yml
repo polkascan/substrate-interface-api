@@ -1,0 +1,38 @@
+version: '3.2'
+
+services:
+
+  substrate-interface-api:
+    build: .
+    image: substrate-interface-api
+    ports:
+      - '8000:8000'
+    volumes:
+      - '.:/usr/src/app'
+    command: ./start.sh
+    environment:
+      - PYTHONPATH=/usr/src/app
+      - ENVIRONMENT=dev
+      - TYPE_REGISTRY=kusama
+      - SUBSTRATE_ADDRESS_TYPE=2
+      - SUBSTRATE_RPC_URL=http://substrate-node:9933/
+    depends_on:
+      - substrate-node
+      - redis
+
+  substrate-node:
+    image: polkasource/substrate-client:kusama-latest
+    hostname: substrate-node
+    volumes:
+      - 'substrate-data:/data'
+    ports:
+      - '30333:30333'
+      - '9933:9933'
+      - '9944:9944'
+    command: --rpc-external --ws-external --rpc-cors=all --pruning=archive
+
+  redis:
+    image: redis:3.2.11
+
+volumes:
+  substrate-data:
