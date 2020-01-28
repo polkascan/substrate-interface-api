@@ -23,6 +23,7 @@ import falcon
 from app.middleware import CatchAllMiddleware
 from dogpile.cache import make_region
 
+from app.middleware.context import ContextMiddleware
 from app.settings import DOGPILE_CACHE_SETTINGS
 from app.resources import jsonrpc
 
@@ -39,7 +40,8 @@ cache_region = make_region().configure(
 
 # Define application
 app = falcon.API(middleware=[
-    CatchAllMiddleware(catch_all_route='/')
+    CatchAllMiddleware(catch_all_route='/'),
+    ContextMiddleware()
 ])
 
 # Application routes
