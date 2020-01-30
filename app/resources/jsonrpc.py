@@ -83,15 +83,17 @@ class JSONRPCResource(BaseResource):
 
     def init_type_registry(self, custom_type_registry=None):
 
-        if DEBUG:
-            print('Custom types at init: ', custom_type_registry)
-
         self.substrate = SubstrateInterface(
             url=SUBSTRATE_RPC_URL,
             address_type=SUBSTRATE_ADDRESS_TYPE,
             type_registry_preset=TYPE_REGISTRY,
-            type_registry=custom_type_registry
+            type_registry=custom_type_registry,
+            cache_region=self.cache_region
         )
+
+        if DEBUG:
+            print('Custom types at init: ', custom_type_registry)
+            self.substrate.debug = True
 
     def init_request(self, params=None):
 
