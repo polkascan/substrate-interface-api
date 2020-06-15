@@ -5,6 +5,7 @@ certifi==2019.6.16
 chardet==3.0.4
 decorator==4.4.0
 dogpile.cache==0.7.1
+docker==4.2.0
 falcon==2.0.0
 greenlet==0.4.15
 gunicorn==19.9.0
@@ -30,5 +31,6 @@ urllib3==1.25.3
 xxhash==1.3.0
 zipp==0.5.2
 
-scalecodec==0.9.33
-substrateinterface==0.9.3
+scalecodec==0.9.52
+substrate-interface==0.9.14
+

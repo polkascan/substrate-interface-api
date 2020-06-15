@@ -21,14 +21,18 @@ import os
 
 SUBSTRATE_RPC_URL = os.environ.get("SUBSTRATE_RPC_URL", "http://substrate-node:9933/")
 SUBSTRATE_ADDRESS_TYPE = int(os.environ.get("SUBSTRATE_ADDRESS_TYPE", 42))
+SUBSTRATE_NETWORK_NAME = os.environ.get("SUBSTRATE_NETWORK_NAME", 'substrate')
 
 TYPE_REGISTRY = os.environ.get("TYPE_REGISTRY", "default")
+TYPE_REGISTRY_FILE = os.environ.get("TYPE_REGISTRY_FILE")
 
 DOGPILE_CACHE_SETTINGS = {
     'host': os.environ.get("DOGPILE_CACHE_HOST", "redis"),
     'port': os.environ.get("DOGPILE_CACHE_PORT", 6379),
     'db': os.environ.get("DOGPILE_CACHE_DB", 1)
 }
+
+SUBKEY_LOCAL_PATH = os.environ.get("SUBKEY_LOCAL_PATH", None)
 
 DEBUG = False
 

@@ -19,11 +19,13 @@
 #  jsonrpc.py
 
 import falcon
+from scalecodec.type_registry import load_type_registry_file
+
 from scalecodec.exceptions import InvalidScaleTypeValueException, RemainingScaleBytesNotEmptyException
 
-from app.settings import SUBSTRATE_RPC_URL, SUBSTRATE_ADDRESS_TYPE, TYPE_REGISTRY, DEBUG
-from scalecodec.base import RuntimeConfiguration, ScaleDecoder, ScaleBytes
-from substrateinterface import SubstrateInterface
+from app import settings
+from scalecodec.base import RuntimeConfiguration
+from substrateinterface import SubstrateInterface, Keypair, SubstrateRequestException
 
 from app.resources.base import BaseResource
 
@@ -49,7 +51,6 @@ class JSONRPCResource(BaseResource):
 
         self.methods = [
             'rpc_methods',
-            'runtime_composeCall',
             'runtime_decodeScale',
             'runtime_encodeScale',
             'runtime_getMetadata',
@@ -72,7 +73,9 @@ class JSONRPCResource(BaseResource):
             'runtime_setCustomTypes',
             'runtime_removeCustomType',
             'runtime_resetCustomTypes',
-            'runtime_getBlock'
+            'runtime_getBlock',
+            'runtime_createSignaturePayload',
+            'runtime_submitExtrinsic'
         ]
 
     def get_request_param(self, params):
@@ -83,15 +86,23 @@ class JSONRPCResource(BaseResource):
 
     def init_type_registry(self, custom_type_registry=None):
 
+        if settings.TYPE_REGISTRY_FILE:
+            type_registry = load_type_registry_file(settings.TYPE_REGISTRY_FILE)
+        else:
+            type_registry = {}
+
+        if custom_type_registry:
+            type_registry.update(custom_type_registry)
+
         self.substrate = SubstrateInterface(
-            url=SUBSTRATE_RPC_URL,
-            address_type=SUBSTRATE_ADDRESS_TYPE,
-            type_registry_preset=TYPE_REGISTRY,
+            url=settings.SUBSTRATE_RPC_URL,
+            address_type=settings.SUBSTRATE_ADDRESS_TYPE,
+            type_registry_preset=settings.TYPE_REGISTRY,
             type_registry=custom_type_registry,
             cache_region=self.cache_region
         )
 
-        if DEBUG:
+        if settings.DEBUG:
             print('Custom types at init: ', custom_type_registry)
             self.substrate.debug = True
 
@@ -171,7 +182,8 @@ class JSONRPCResource(BaseResource):
                     # Get response
                     response = self.substrate.get_runtime_metadata(block_hash=self.block_hash)
 
-                elif method == 'runtime_composeCall':
+                elif method == 'runtime_createSignaturePayload':
+                    account = self.get_request_param(params)
                     call_module = self.get_request_param(params)
                     call_function = self.get_request_param(params)
                     call_params = self.get_request_param(params)
@@ -179,16 +191,26 @@ class JSONRPCResource(BaseResource):
                     self.init_request(params)
 
                     try:
-                        payload = self.substrate.compose_call(
+                        # Create call
+                        call = self.substrate.compose_call(
                             call_module=call_module,
                             call_function=call_function,
                             call_params=call_params,
                             block_hash=self.block_hash
                         )
 
+                        nonce = self.substrate.get_account_nonce(account) or 0
+
+                        # Generate signature payload
+                        signature_payload = self.substrate.generate_signature_payload(
+                            call=call,
+                            nonce=nonce,
+                            include_call_length=True
+                        )
+
                         response = {
                             "jsonrpc": "2.0",
-                            "result": payload,
+                            "result": str(signature_payload),
                             "id": req.media.get('id')
                         }
                     except ValueError as e:
@@ -198,6 +220,62 @@ class JSONRPCResource(BaseResource):
                                 "code": -999,
                                 "message": str(e)
                             },
+                            "id": req.media.get('id')
+                        }
+                elif method == 'runtime_submitExtrinsic':
+                    account = self.get_request_param(params)
+                    call_module = self.get_request_param(params)
+                    call_function = self.get_request_param(params)
+                    call_params = self.get_request_param(params)
+                    signature = self.get_request_param(params)
+
+                    self.init_request(params)
+
+                    try:
+                        # Create call
+                        call = self.substrate.compose_call(
+                            call_module=call_module,
+                            call_function=call_function,
+                            call_params=call_params,
+                            block_hash=self.block_hash
+                        )
+
+                        nonce = self.substrate.get_account_nonce(account) or 0
+
+                        # Create keypair with only public given given in request
+                        keypair = Keypair(ss58_address=account)
+
+                        # Create extrinsic
+                        extrinsic = self.substrate.create_signed_extrinsic(
+                            call=call,
+                            keypair=keypair,
+                            nonce=nonce,
+                            signature=signature
+                        )
+
+                        # Submit extrinsic to the node
+                        result = self.substrate.submit_extrinsic(
+                            extrinsic=extrinsic
+                        )
+
+                        response = {
+                            "jsonrpc": "2.0",
+                            "result": result,
+                            "id": req.media.get('id')
+                        }
+                    except ValueError as e:
+                        response = {
+                            "jsonrpc": "2.0",
+                            "error": {
+                                "code": -999,
+                                "message": str(e)
+                            },
+                            "id": req.media.get('id')
+                        }
+                    except SubstrateRequestException as e:
+                        response = {
+                            "jsonrpc": "2.0",
+                            "error": e.args[0],
                             "id": req.media.get('id')
                         }
                 elif method == 'runtime_getMetadataModules':
@@ -401,7 +479,7 @@ class JSONRPCResource(BaseResource):
                     # Store updated custom type registry
                     self.cache_region.set('CUSTOM_TYPE_REGISTRY', custom_type_registry)
 
-                    if DEBUG:
+                    if settings.DEBUG:
                         print('Custom types updated to: ', custom_type_registry)
 
                     # Update runtime configuration
@@ -431,7 +509,7 @@ class JSONRPCResource(BaseResource):
                     RuntimeConfiguration().clear_type_registry()
                     self.init_type_registry(custom_type_registry)
 
-                    if DEBUG:
+                    if settings.DEBUG:
                         print('Custom types updated to: ', custom_type_registry)
 
                     response = {
@@ -450,7 +528,7 @@ class JSONRPCResource(BaseResource):
                     RuntimeConfiguration().clear_type_registry()
                     self.init_type_registry()
 
-                    if DEBUG:
+                    if settings.DEBUG:
                         print('Custom types cleared')
 
                     response = {
@@ -561,4 +639,3 @@ class JSONRPCResource(BaseResource):
                     "id": req.media.get('id')
                 }
             resp.media = response
-
