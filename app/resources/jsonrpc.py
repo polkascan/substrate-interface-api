@@ -75,7 +75,12 @@ class JSONRPCResource(BaseResource):
             'runtime_resetCustomTypes',
             'runtime_getBlock',
             'runtime_createSignaturePayload',
-            'runtime_submitExtrinsic'
+            'runtime_createExternalSignerPayload',
+            'runtime_submitExtrinsic',
+            'keypair_create',
+            'keypair_inspect',
+            'keypair_sign',
+            'keypair_verify'
         ]
 
     def get_request_param(self, params):
@@ -182,7 +187,7 @@ class JSONRPCResource(BaseResource):
                     # Get response
                     response = self.substrate.get_runtime_metadata(block_hash=self.block_hash)
 
-                elif method == 'runtime_createSignaturePayload':
+                elif method in ['runtime_createSignaturePayload', 'runtime_createExternalSignerPayload']:
                     account = self.get_request_param(params)
                     call_module = self.get_request_param(params)
                     call_function = self.get_request_param(params)
@@ -201,16 +206,24 @@ class JSONRPCResource(BaseResource):
 
                         nonce = self.substrate.get_account_nonce(account) or 0
 
+                        if method == 'runtime_createExternalSignerPayload':
+                            include_call_length = True
+                        else:
+                            include_call_length = False
+
                         # Generate signature payload
                         signature_payload = self.substrate.generate_signature_payload(
                             call=call,
                             nonce=nonce,
-                            include_call_length=True
+                            include_call_length=include_call_length
                         )
 
                         response = {
                             "jsonrpc": "2.0",
-                            "result": str(signature_payload),
+                            "result": {
+                                'signature_payload': str(signature_payload),
+                                'nonce': nonce,
+                            },
                             "id": req.media.get('id')
                         }
                     except ValueError as e:
@@ -613,6 +626,67 @@ class JSONRPCResource(BaseResource):
                         "result": result,
                         "id": req.media.get('id')
                     }
+                elif method == 'keypair_create':
+
+                    word_count = self.get_request_param(params)
+
+                    mnemonic = Keypair.generate_mnemonic(word_count)
+
+                    keypair = Keypair.create_from_mnemonic(mnemonic, address_type=settings.SUBSTRATE_ADDRESS_TYPE)
+
+                    response = {
+                        "jsonrpc": "2.0",
+                        "result": {
+                            'ss58_address': keypair.ss58_address,
+                            'public_key': keypair.public_key,
+                            'private_key': keypair.private_key,
+                            'mnemonic': keypair.mnemonic,
+                        },
+                        "id": req.media.get('id')
+                    }
+                elif method == 'keypair_inspect':
+
+                    mnemonic = self.get_request_param(params)
+
+                    keypair = Keypair.create_from_mnemonic(mnemonic, address_type=settings.SUBSTRATE_ADDRESS_TYPE)
+
+                    response = {
+                        "jsonrpc": "2.0",
+                        "result": {
+                            'ss58_address': keypair.ss58_address,
+                            'public_key': keypair.public_key,
+                            'private_key': keypair.private_key,
+                            'mnemonic': keypair.mnemonic,
+                        },
+                        "id": req.media.get('id')
+                    }
+                elif method == 'keypair_sign':
+                    mnemonic = self.get_request_param(params)
+                    data = self.get_request_param(params)
+
+                    keypair = Keypair.create_from_mnemonic(mnemonic, address_type=settings.SUBSTRATE_ADDRESS_TYPE)
+                    signature = keypair.sign(data)
+
+                    response = {
+                        "jsonrpc": "2.0",
+                        "result": {'signature': signature},
+                        "id": req.media.get('id')
+                    }
+
+                elif method == 'keypair_verify':
+                    account_address = self.get_request_param(params)
+                    data = self.get_request_param(params)
+                    signature = self.get_request_param(params)
+
+                    keypair = Keypair(ss58_address=account_address, address_type=settings.SUBSTRATE_ADDRESS_TYPE)
+                    result = keypair.verify(data, signature)
+
+                    response = {
+                        "jsonrpc": "2.0",
+                        "result": {'verified': result},
+                        "id": req.media.get('id')
+                    }
+
                 elif method == 'rpc_methods':
 
                     response = self.substrate.rpc_request(method, params)
