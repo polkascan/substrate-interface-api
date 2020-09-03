@@ -76,6 +76,7 @@ class JSONRPCResource(BaseResource):
             'runtime_getBlock',
             'runtime_createSignaturePayload',
             'runtime_createExternalSignerPayload',
+            'runtime_createExtrinsic',
             'runtime_submitExtrinsic',
             'keypair_create',
             'keypair_inspect',
@@ -235,7 +236,7 @@ class JSONRPCResource(BaseResource):
                             },
                             "id": req.media.get('id')
                         }
-                elif method == 'runtime_submitExtrinsic':
+                elif method in ['runtime_submitExtrinsic', 'runtime_createExtrinsic']:
                     account = self.get_request_param(params)
                     call_module = self.get_request_param(params)
                     call_function = self.get_request_param(params)
@@ -266,10 +267,13 @@ class JSONRPCResource(BaseResource):
                             signature=signature
                         )
 
-                        # Submit extrinsic to the node
-                        result = self.substrate.submit_extrinsic(
-                            extrinsic=extrinsic
-                        )
+                        if method == 'runtime_createExtrinsic':
+                            result = str(extrinsic.data)
+                        else:
+                            # Submit extrinsic to the node
+                            result = self.substrate.submit_extrinsic(
+                                extrinsic=extrinsic
+                            )
 
                         response = {
                             "jsonrpc": "2.0",
