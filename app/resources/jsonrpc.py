@@ -632,7 +632,7 @@ class JSONRPCResource(BaseResource):
                     }
                 elif method == 'keypair_create':
 
-                    word_count = self.get_request_param(params)
+                    word_count = self.get_request_param(params) or 0
 
                     mnemonic = Keypair.generate_mnemonic(word_count)
 
