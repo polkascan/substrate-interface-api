@@ -241,6 +241,7 @@ class JSONRPCResource(BaseResource):
                     call_module = self.get_request_param(params)
                     call_function = self.get_request_param(params)
                     call_params = self.get_request_param(params)
+                    crypto_type = int(self.get_request_param(params) or 1)
                     signature = self.get_request_param(params)
 
                     self.init_request(params)
@@ -257,7 +258,7 @@ class JSONRPCResource(BaseResource):
                         nonce = self.substrate.get_account_nonce(account) or 0
 
                         # Create keypair with only public given given in request
-                        keypair = Keypair(ss58_address=account)
+                        keypair = Keypair(ss58_address=account, crypto_type=crypto_type)
 
                         # Create extrinsic
                         extrinsic = self.substrate.create_signed_extrinsic(
@@ -633,10 +634,13 @@ class JSONRPCResource(BaseResource):
                 elif method == 'keypair_create':
 
                     word_count = self.get_request_param(params) or 0
+                    crypto_type = int(self.get_request_param(params) or 1)
 
                     mnemonic = Keypair.generate_mnemonic(word_count)
 
-                    keypair = Keypair.create_from_mnemonic(mnemonic, address_type=settings.SUBSTRATE_ADDRESS_TYPE)
+                    keypair = Keypair.create_from_mnemonic(
+                        mnemonic=mnemonic, address_type=settings.SUBSTRATE_ADDRESS_TYPE, crypto_type=crypto_type
+                    )
 
                     response = {
                         "jsonrpc": "2.0",
@@ -651,8 +655,11 @@ class JSONRPCResource(BaseResource):
                 elif method == 'keypair_inspect':
 
                     mnemonic = self.get_request_param(params)
+                    crypto_type = int(self.get_request_param(params) or 1)
 
-                    keypair = Keypair.create_from_mnemonic(mnemonic, address_type=settings.SUBSTRATE_ADDRESS_TYPE)
+                    keypair = Keypair.create_from_mnemonic(
+                        mnemonic=mnemonic, address_type=settings.SUBSTRATE_ADDRESS_TYPE, crypto_type=crypto_type
+                    )
 
                     response = {
                         "jsonrpc": "2.0",
@@ -667,8 +674,11 @@ class JSONRPCResource(BaseResource):
                 elif method == 'keypair_sign':
                     mnemonic = self.get_request_param(params)
                     data = self.get_request_param(params)
+                    crypto_type = int(self.get_request_param(params) or 1)
 
-                    keypair = Keypair.create_from_mnemonic(mnemonic, address_type=settings.SUBSTRATE_ADDRESS_TYPE)
+                    keypair = Keypair.create_from_mnemonic(
+                        mnemonic=mnemonic, address_type=settings.SUBSTRATE_ADDRESS_TYPE, crypto_type=crypto_type
+                    )
                     signature = keypair.sign(data)
 
                     response = {
@@ -681,8 +691,13 @@ class JSONRPCResource(BaseResource):
                     account_address = self.get_request_param(params)
                     data = self.get_request_param(params)
                     signature = self.get_request_param(params)
+                    crypto_type = int(self.get_request_param(params) or 1)
 
-                    keypair = Keypair(ss58_address=account_address, address_type=settings.SUBSTRATE_ADDRESS_TYPE)
+                    keypair = Keypair(
+                        ss58_address=account_address,
+                        address_type=settings.SUBSTRATE_ADDRESS_TYPE,
+                        crypto_type=crypto_type
+                    )
                     result = keypair.verify(data, signature)
 
                     response = {
