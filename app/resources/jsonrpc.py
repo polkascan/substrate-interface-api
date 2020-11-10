@@ -78,6 +78,7 @@ class JSONRPCResource(BaseResource):
             'runtime_createExternalSignerPayload',
             'runtime_createExtrinsic',
             'runtime_submitExtrinsic',
+            'runtime_getPaymentInfo',
             'keypair_create',
             'keypair_inspect',
             'keypair_sign',
@@ -296,6 +297,29 @@ class JSONRPCResource(BaseResource):
                             "error": e.args[0],
                             "id": req.media.get('id')
                         }
+                elif method == 'runtime_getPaymentInfo':
+
+                    account = self.get_request_param(params)
+                    call_module = self.get_request_param(params)
+                    call_function = self.get_request_param(params)
+                    call_params = self.get_request_param(params)
+
+                    # Create call
+                    call = self.substrate.compose_call(
+                        call_module=call_module,
+                        call_function=call_function,
+                        call_params=call_params
+                    )
+
+                    # Create keypair with only public given given in request
+                    keypair = Keypair(ss58_address=account)
+
+                    response = {
+                        "jsonrpc": "2.0",
+                        "result": self.substrate.get_payment_info(call=call, keypair=keypair),
+                        "id": req.media.get('id')
+                    }
+
                 elif method == 'runtime_getMetadataModules':
 
                     self.init_request(params)
