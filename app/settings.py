@@ -32,8 +32,6 @@ DOGPILE_CACHE_SETTINGS = {
     'db': os.environ.get("DOGPILE_CACHE_DB", 1)
 }
 
-SUBKEY_LOCAL_PATH = os.environ.get("SUBKEY_LOCAL_PATH", None)
-
 DEBUG = False
 
 try:
