@@ -19,13 +19,19 @@
 #  main.py
 
 import falcon
+from dogpile.cache import make_region
+from scalecodec.updater import update_type_registries
 
 from app.middleware import CatchAllMiddleware
-from dogpile.cache import make_region
-
 from app.middleware.context import ContextMiddleware
 from app.settings import DOGPILE_CACHE_SETTINGS
 from app.resources import jsonrpc
+
+# Gracefully update type registries in Scale codec
+try:
+    update_type_registries()
+except Exception:
+    pass
 
 # Define cache region
 cache_region = make_region().configure(
