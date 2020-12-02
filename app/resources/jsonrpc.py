@@ -194,6 +194,8 @@ class JSONRPCResource(BaseResource):
                     call_module = self.get_request_param(params)
                     call_function = self.get_request_param(params)
                     call_params = self.get_request_param(params)
+                    tip = self.get_request_param(params) or 0
+                    era = self.get_request_param(params)
 
                     self.init_request(params)
 
@@ -208,6 +210,10 @@ class JSONRPCResource(BaseResource):
 
                         nonce = self.substrate.get_account_nonce(account) or 0
 
+                        if isinstance(era, dict) and 'current' not in era and 'phase' not in era:
+                            # Retrieve current block id
+                            era['current'] = self.substrate.get_block_number(self.substrate.get_chain_head())
+
                         if method == 'runtime_createExternalSignerPayload':
                             include_call_length = True
                         else:
@@ -217,6 +223,8 @@ class JSONRPCResource(BaseResource):
                         signature_payload = self.substrate.generate_signature_payload(
                             call=call,
                             nonce=nonce,
+                            tip=tip,
+                            era=era,
                             include_call_length=include_call_length
                         )
 
@@ -225,6 +233,7 @@ class JSONRPCResource(BaseResource):
                             "result": {
                                 'signature_payload': str(signature_payload),
                                 'nonce': nonce,
+                                'era': era
                             },
                             "id": req.media.get('id')
                         }
@@ -242,6 +251,8 @@ class JSONRPCResource(BaseResource):
                     call_module = self.get_request_param(params)
                     call_function = self.get_request_param(params)
                     call_params = self.get_request_param(params)
+                    tip = self.get_request_param(params) or 0
+                    era = self.get_request_param(params)
                     crypto_type = int(self.get_request_param(params) or 1)
                     signature = self.get_request_param(params)
 
@@ -261,12 +272,17 @@ class JSONRPCResource(BaseResource):
                         # Create keypair with only public given given in request
                         keypair = Keypair(ss58_address=account, crypto_type=crypto_type)
 
+                        if isinstance(era, dict) and 'current' in era:
+                            era['current'] = int(era['current'])
+
                         # Create extrinsic
                         extrinsic = self.substrate.create_signed_extrinsic(
                             call=call,
                             keypair=keypair,
                             nonce=nonce,
-                            signature=signature
+                            signature=signature,
+                            tip=tip,
+                            era=era
                         )
 
                         if method == 'runtime_createExtrinsic':
