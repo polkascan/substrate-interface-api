@@ -25,7 +25,8 @@ from scalecodec.exceptions import InvalidScaleTypeValueException, RemainingScale
 
 from app import settings
 from scalecodec.base import RuntimeConfiguration
-from substrateinterface import SubstrateInterface, Keypair, SubstrateRequestException
+from substrateinterface import SubstrateInterface, Keypair
+from substrateinterface.exceptions import SubstrateRequestException
 
 from app.resources.base import BaseResource
 
@@ -105,8 +106,7 @@ class JSONRPCResource(BaseResource):
             url=settings.SUBSTRATE_RPC_URL,
             address_type=settings.SUBSTRATE_ADDRESS_TYPE,
             type_registry_preset=settings.TYPE_REGISTRY,
-            type_registry=custom_type_registry,
-            cache_region=self.cache_region
+            type_registry=custom_type_registry
         )
 
         if settings.DEBUG:
