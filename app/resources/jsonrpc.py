@@ -372,7 +372,7 @@ class JSONRPCResource(BaseResource):
 
                     response = {
                         "jsonrpc": "2.0",
-                        "result": result,
+                        "result": result.value,
                         "id": req.media.get('id')
                     }
                 elif method == 'runtime_getMetadataEvents':
