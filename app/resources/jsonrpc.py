@@ -295,7 +295,11 @@ class JSONRPCResource(BaseResource):
 
                         response = {
                             "jsonrpc": "2.0",
-                            "result": result,
+                            "result": {
+                                "extrinsic_hash": result.extrinsic_hash,
+                                "block_hash": result.block_hash,
+                                "finalized": result.finalized,
+                            },
                             "id": req.media.get('id')
                         }
                     except ValueError as e:
