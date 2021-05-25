@@ -157,9 +157,17 @@ class JSONRPCResource(BaseResource):
                 # Process methods
                 if method == 'runtime_getBlock':
                     self.init_request(params)
+
+                    block = self.substrate.get_block(block_hash=self.block_hash)
+
+                    if block:
+
+                        block['extrinsics'] = [extrinsic.value for extrinsic in block['extrinsics']]
+                        block['header']["digest"]["logs"] = [log.value for log in block['header']["digest"]["logs"]]
+
                     response = {
                         "jsonrpc": "2.0",
-                        "result": self.substrate.get_runtime_block(block_hash=self.block_hash),
+                        "result": block,
                         "id": req.media.get('id')
                     }
                 elif method == 'runtime_getState':
@@ -175,12 +183,13 @@ class JSONRPCResource(BaseResource):
                     self.init_request(params)
 
                     # Get response
-                    response = self.substrate.get_runtime_state(
+                    obj = self.substrate.query(
                         module=module,
                         storage_function=storage_function,
                         params=storage_params,
                         block_hash=self.block_hash
                     )
+                    response = {'result': obj.value if obj else None}
 
                 elif method == 'runtime_getMetadata':
                     # Process params
@@ -289,17 +298,18 @@ class JSONRPCResource(BaseResource):
                             result = str(extrinsic.data)
                         else:
                             # Submit extrinsic to the node
-                            result = self.substrate.submit_extrinsic(
+                            extrinsic_result = self.substrate.submit_extrinsic(
                                 extrinsic=extrinsic
                             )
+                            result = {
+                                "extrinsic_hash": extrinsic_result.extrinsic_hash,
+                                "block_hash": extrinsic_result.block_hash,
+                                "finalized": extrinsic_result.finalized,
+                            }
 
                         response = {
                             "jsonrpc": "2.0",
-                            "result": {
-                                "extrinsic_hash": result.extrinsic_hash,
-                                "block_hash": result.block_hash,
-                                "finalized": result.finalized,
-                            },
+                            "result": result,
                             "id": req.media.get('id')
                         }
                     except ValueError as e:
