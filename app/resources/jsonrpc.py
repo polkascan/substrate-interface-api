@@ -104,7 +104,7 @@ class JSONRPCResource(BaseResource):
 
         self.substrate = SubstrateInterface(
             url=settings.SUBSTRATE_RPC_URL,
-            address_type=settings.SUBSTRATE_ADDRESS_TYPE,
+            ss58_format=settings.SUBSTRATE_ADDRESS_TYPE,
             type_registry_preset=settings.TYPE_REGISTRY,
             type_registry=custom_type_registry
         )
@@ -473,7 +473,7 @@ class JSONRPCResource(BaseResource):
 
                     response = {
                         "jsonrpc": "2.0",
-                        "result": result,
+                        "result": result.value,
                         "id": req.media.get('id')
                     }
                 elif method == 'runtime_getMetadataErrors':
@@ -693,7 +693,7 @@ class JSONRPCResource(BaseResource):
                     mnemonic = Keypair.generate_mnemonic(word_count)
 
                     keypair = Keypair.create_from_mnemonic(
-                        mnemonic=mnemonic, address_type=settings.SUBSTRATE_ADDRESS_TYPE, crypto_type=crypto_type
+                        mnemonic=mnemonic, ss58_format=settings.SUBSTRATE_ADDRESS_TYPE, crypto_type=crypto_type
                     )
 
                     response = {
@@ -712,7 +712,7 @@ class JSONRPCResource(BaseResource):
                     crypto_type = int(self.get_request_param(params) or 1)
 
                     keypair = Keypair.create_from_mnemonic(
-                        mnemonic=mnemonic, address_type=settings.SUBSTRATE_ADDRESS_TYPE, crypto_type=crypto_type
+                        mnemonic=mnemonic, ss58_format=settings.SUBSTRATE_ADDRESS_TYPE, crypto_type=crypto_type
                     )
 
                     response = {
@@ -731,7 +731,7 @@ class JSONRPCResource(BaseResource):
                     crypto_type = int(self.get_request_param(params) or 1)
 
                     keypair = Keypair.create_from_mnemonic(
-                        mnemonic=mnemonic, address_type=settings.SUBSTRATE_ADDRESS_TYPE, crypto_type=crypto_type
+                        mnemonic=mnemonic, ss58_format=settings.SUBSTRATE_ADDRESS_TYPE, crypto_type=crypto_type
                     )
                     signature = keypair.sign(data)
 
@@ -749,7 +749,7 @@ class JSONRPCResource(BaseResource):
 
                     keypair = Keypair(
                         ss58_address=account_address,
-                        address_type=settings.SUBSTRATE_ADDRESS_TYPE,
+                        ss58_format=settings.SUBSTRATE_ADDRESS_TYPE,
                         crypto_type=crypto_type
                     )
                     result = keypair.verify(data, signature)
